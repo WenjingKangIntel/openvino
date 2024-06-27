@@ -16,7 +16,7 @@ function(ov_search_api_validator)
             set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION ${WINDOWS_SDK_VERSION})
             message(STATUS "Use ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} Windows SDK version")
             # set to parent scope as well for later usage in '_ov_add_api_validator_post_build_step'
-            set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION ${WINDOWS_SDK_VERSION} PARENT_SCOPE)
+            set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION ${WINDOWS_SDK_VERSION} CACHE INTERNAL "")
         else()
             message(FATAL_ERROR "WindowsSDKVersion environment variable is not set,\
 can't find Windows SDK version. Try to use vcvarsall.bat script")
@@ -111,7 +111,7 @@ function(_ov_add_api_validator_post_build_step)
     else()
         message(FATAL_ERROR "Unknown configuration: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
     endif()
-    set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION ${WINDOWS_SDK_VERSION})
+
     find_file(ONECORE_API_VALIDATOR_APIS NAMES UniversalDDIs.xml
               PATHS "${PROGRAMFILES}/Windows Kits/10/build/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/universalDDIs/${wdk_platform}"
                     "${PROGRAMFILES}/Windows Kits/10/build/universalDDIs/${wdk_platform}"

@@ -16,7 +16,7 @@ function(ov_search_api_validator)
             set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION ${WINDOWS_SDK_VERSION})
             message(STATUS "Use ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} Windows SDK version")
             # set to parent scope as well for later usage in '_ov_add_api_validator_post_build_step'
-            set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION ${WINDOWS_SDK_VERSION} CACHE INTERNAL "")
+            set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION ${WINDOWS_SDK_VERSION} PARENT_SCOPE)
         else()
             message(FATAL_ERROR "WindowsSDKVersion environment variable is not set,\
 can't find Windows SDK version. Try to use vcvarsall.bat script")
@@ -29,7 +29,7 @@ can't find Windows SDK version. Try to use vcvarsall.bat script")
     # we don't have such variable
     if(DEFINED ENV{${PROGRAMFILES_ENV}})
         file(TO_CMAKE_PATH $ENV{${PROGRAMFILES_ENV}} PROGRAMFILES)
-
+        set(PROGRAMFILES ${PROGRAMFILES} PARENT_SCOPE)
         set(WDK_PATHS "${PROGRAMFILES}/Windows Kits/10/bin/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/x64"
                       "${PROGRAMFILES}/Windows Kits/10/bin/x64")
 

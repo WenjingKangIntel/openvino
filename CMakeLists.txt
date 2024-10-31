@@ -61,6 +61,9 @@ set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} /DEB
 
 message("CMAKE_CXX_FLAGS_RELEASE in OV CMakeLists.txt::: ${CMAKE_CXX_FLAGS_RELEASE}")
 message("CMAKE_C_FLAGS_RELEASE in OV CMakeLists.txt::: ${CMAKE_C_FLAGS_RELEASE}")
+message("CMAKE_CXX_FLAGS_RELEASE_INIT in OV CMakeLists.txt::: ${CMAKE_CXX_FLAGS_RELEASE_INIT}")
+message("CMAKE_C_FLAGS_RELEASE_INIT in OV CMakeLists.txt::: ${CMAKE_C_FLAGS_RELEASE_INIT}")
+
 
 find_package(OpenVINODeveloperScripts REQUIRED
              PATHS "${OpenVINO_SOURCE_DIR}/cmake/developer_package"

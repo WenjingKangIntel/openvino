@@ -36,7 +36,9 @@ namespace intel_npu {
 #define vcl_weak_symbols_list()                             \
     vcl_symbol_statement(vclAllocatedExecutableCreate2)     \
     vcl_symbol_statement(vclGetCompilerSupportedOptions)    \
-    vcl_symbol_statement(vclGetCompilerIsOptionSupported)
+    vcl_symbol_statement(vclGetCompilerIsOptionSupported)   \
+    vcl_symbol_statement(vclAllocatedExecutableCreateWS)
+
 // clang-format on
 
 class VCLApi {

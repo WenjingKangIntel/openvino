@@ -383,8 +383,7 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
                                            maxOpsetVersion,
                                            updatedConfig.isAvailable(ov::intel_npu::use_base_model_serializer.name())
                                                ? updatedConfig.get<USE_BASE_MODEL_SERIALIZER>()
-                                               : true,
-                                           updatedConfig.get<SERIALIZATION_WEIGHTS_SIZE_THRESHOLD>());
+                                               : true);
 
     std::string buildFlags;
     const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
@@ -403,14 +402,25 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
 
     _logger.debug("Using vclAllocatedExecutableCreateWS");
     vcl_allocator_vector allocator;
-    uint8_t* blob = nullptr;
-    size_t size = 0;
+    vcl_blob_container blocContainer;
+
+    THROW_ON_FAIL_FOR_VCL("vclAllocatedExecutableCreateWS",
+                          vclAllocatedExecutableCreateWS(_compilerHandle, exeDesc, &allocator, &blocContainer),
+                          _logHandle);
+
+    if (blocContainer.blobCount == 0 || blocContainer.blobSize == nullptr || blocContainer.blobBuffer == nullptr) {
+        OPENVINO_THROW("Failed to create VCL executable, blobCount is zero or blob is null");
+    }
+    // Use empty metadata as VCL does not support metadata extraction
+    NetworkMetadata metadata;
 
     // TODO fill the rest. Call "vclAllocatedExecutableCreateWS" and any other remote function required to retrieve the
     // vector of blobs and use them to construct the vector of "NetworkDescription". The metadata objects can be empty.
 
+    std::vector<std::shared_ptr<NetworkDescription>> resDescs;
+
     _logger.debug("compile end, blob size:%d", allocator.m_vec.size());
-    return {};
+    return resDescs;
 }
 
 NetworkDescription VCLCompilerImpl::compileWsIterative(const std::shared_ptr<ov::Model>& model,

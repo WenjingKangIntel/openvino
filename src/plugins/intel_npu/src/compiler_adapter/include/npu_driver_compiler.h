@@ -272,6 +272,17 @@ VCL_APIEXPORT vcl_result_t VCL_APICALL vclAllocatedExecutableCreate2(vcl_compile
                                                                      uint8_t** blobBuffer,
                                                                      uint64_t* blobSize);
 
+typedef struct __vcl_blob_container {
+    uint8_t blobCount;
+    uint64_t* blobSize;
+    uint8_t** blobBuffer;
+} vcl_blob_container;
+
+VCL_APIEXPORT vcl_result_t VCL_APICALL vclAllocatedExecutableCreateWS(vcl_compiler_handle_t compiler,
+                                                                       vcl_executable_desc_t desc,
+                                                                       vcl_allocator2_t* allocator,
+                                                                       vcl_blob_container* blobContainer);
+
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Destroys the executable and releases the cached blob.
 VCL_APIEXPORT vcl_result_t VCL_APICALL vclExecutableDestroy(vcl_executable_handle_t executable);

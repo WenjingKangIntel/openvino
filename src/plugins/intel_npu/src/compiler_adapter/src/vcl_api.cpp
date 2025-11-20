@@ -191,10 +191,10 @@ struct vcl_allocator_vector_2 : vcl_allocator2_t {
 
     static uint8_t* vector_allocate(vcl_allocator2_t* allocator, size_t size) {
         vcl_allocator_vector_2* vecAllocator = static_cast<vcl_allocator_vector_2*>(allocator);
-        std::vector<uint8_t> newVec;
-        newVec.resize(size);
-        uint8_t* ptr = newVec.data();
-        vecAllocator->m_vector.emplace_back(std::make_pair(ptr, std::move(newVec)));
+        auto newVec = std::make_shared<std::vector<uint8_t>>();
+        newVec->resize(size);
+        uint8_t* ptr = newVec->data();
+        vecAllocator->m_vector.emplace_back(std::make_pair(ptr, std::move(*newVec)));
         return ptr;
     }
 

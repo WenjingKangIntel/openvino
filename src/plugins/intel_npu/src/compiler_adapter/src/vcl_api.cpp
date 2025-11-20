@@ -186,6 +186,27 @@ struct vcl_allocator_vector : vcl_allocator2_t {
     std::vector<uint8_t> m_vec;
 };
 
+struct vcl_allocator_vector_2 : vcl_allocator2_t {
+    vcl_allocator_vector_2() : vcl_allocator2_t{vector_allocate, vector_deallocate} {}
+
+    static uint8_t* vector_allocate(vcl_allocator2_t* allocator, size_t size) {
+        vcl_allocator_vector_2* vecAllocator = static_cast<vcl_allocator_vector_2*>(allocator);
+        std::vector<uint8_t> newVec;
+        newVec.resize(size);
+        uint8_t* ptr = newVec.data();
+        vecAllocator->m_vector.emplace_back(std::make_pair(ptr, std::move(newVec)));
+        return ptr;
+    }
+
+    static void vector_deallocate(vcl_allocator2_t* allocator, uint8_t* ptr) {
+        vcl_allocator_vector_2* vecAllocator = static_cast<vcl_allocator_vector_2*>(allocator);
+        vecAllocator->m_vector.clear();
+        vecAllocator->m_vector.shrink_to_fit();
+    }
+
+    std::vector<std::pair<uint8_t*, std::vector<uint8_t>>> m_vector;
+};
+
 struct vcl_allocator_malloc {
     static uint8_t* vcl_allocate(uint64_t size) {
         return reinterpret_cast<uint8_t*>(malloc(size));
@@ -401,7 +422,7 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
     _logger.debug("compiler vcl version: %d.%d", _vclVersion.major, _vclVersion.minor);
 
     _logger.debug("Using vclAllocatedExecutableCreateWS");
-    vcl_allocator_vector allocator;
+    vcl_allocator_vector_2 allocator;
     vcl_blob_container blocContainer;
 
     THROW_ON_FAIL_FOR_VCL("vclAllocatedExecutableCreateWS",
@@ -417,10 +438,12 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
     // TODO fill the rest. Call "vclAllocatedExecutableCreateWS" and any other remote function required to retrieve the
     // vector of blobs and use them to construct the vector of "NetworkDescription". The metadata objects can be empty.
 
-    std::vector<std::shared_ptr<NetworkDescription>> resDescs;
-
-    _logger.debug("compile end, blob size:%d", allocator.m_vec.size());
-    return resDescs;
+    std::vector<std::shared_ptr<NetworkDescription>> networkDescrs;
+    for (int i = 0; i < blocContainer.blobCount; i++) {
+        networkDescrs.emplace_back(
+            std::make_shared<NetworkDescription>(std::move(allocator.m_vector[i].second), std::move(metadata)));
+    }
+    return networkDescrs;
 }
 
 NetworkDescription VCLCompilerImpl::compileWsIterative(const std::shared_ptr<ov::Model>& model,

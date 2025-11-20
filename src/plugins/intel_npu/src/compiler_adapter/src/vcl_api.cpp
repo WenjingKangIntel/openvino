@@ -194,7 +194,7 @@ struct vcl_allocator_vector_2 : vcl_allocator2_t {
         auto newVec = std::make_shared<std::vector<uint8_t>>();
         newVec->resize(size);
         uint8_t* ptr = newVec->data();
-        vecAllocator->m_vector.emplace_back(std::make_pair(ptr, std::move(*newVec)));
+        vecAllocator->m_vector.emplace_back(std::make_pair(ptr, newVec));
         return ptr;
     }
 
@@ -204,7 +204,7 @@ struct vcl_allocator_vector_2 : vcl_allocator2_t {
         vecAllocator->m_vector.shrink_to_fit();
     }
 
-    std::vector<std::pair<uint8_t*, std::vector<uint8_t>>> m_vector;
+    std::vector<std::pair<uint8_t*, std::shared_ptr<std::vector<uint8_t>>>> m_vector;
 };
 
 struct vcl_allocator_malloc {
@@ -441,7 +441,7 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
         // Use empty metadata as VCL does not support metadata extraction
         NetworkMetadata metadata;
         networkDescrs.emplace_back(
-            std::make_shared<NetworkDescription>(std::move(allocator.m_vector[i].second), std::move(metadata)));
+            std::make_shared<NetworkDescription>(std::move(*allocator.m_vector[i].second), std::move(metadata)));
     }
     return networkDescrs;
 }

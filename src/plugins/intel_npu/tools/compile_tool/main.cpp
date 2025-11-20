@@ -486,29 +486,19 @@ int main(int argc, char* argv[]) {
         }
 
         std::cout << "Compiling model" << std::endl;
-        std::cout << "Compiling model - 0" << std::endl;
-
         auto compiledModel = core.compile_model(model, FLAGS_d, {configs.begin(), configs.end()});
-        std::cout << "Compiling model - 1.0" << std::endl;
         loadNetworkTimeElapsed =
             std::chrono::duration_cast<TimeDiff>(std::chrono::steady_clock::now() - timeBeforeLoadNetwork);
         std::string outputName = FLAGS_o;
         if (outputName.empty()) {
             outputName = getFileNameFromPath(fileNameNoExt(FLAGS_m)) + ".blob";
         }
-        std::cout << "Compiling model - 1" << std::endl;
 
         std::ofstream outputFile{outputName, std::ios::out | std::ios::binary};
-        std::cout << "Compiling model - 2" << std::endl;
-
         if (!outputFile.is_open()) {
             std::cout << "Outputting file " << outputName << " can't be opened for writing" << std::endl;
-            std::cout << "Compiling model - 3" << std::endl;
-
             return EXIT_FAILURE;
         } else {
-            std::cout << "Compiling model - 4" << std::endl;
-
             std::cout << "Writing into file - " << outputName << std::endl;
             compiledModel.export_model(outputFile);
         }

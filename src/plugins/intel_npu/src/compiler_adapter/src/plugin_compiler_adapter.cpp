@@ -219,13 +219,11 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
     GraphDescriptor mainGraphDesc;
     NetworkMetadata mainNetworkMetadata;
     std::shared_ptr<NetworkDescription> mainNetworkDescription;
-    std::cout << "Plugin::compile_model BEFORE compileWithConfig17" << std::endl;
 
     switch (localConfig.get<SEPARATE_WEIGHTS_VERSION>()) {
     case ov::intel_npu::WSVersion::ONE_SHOT: {
         std::vector<std::shared_ptr<NetworkDescription>> initMainNetworkDescriptions =
             _compiler->compileWsOneShot(model, localConfig);
-        std::cout << "Plugin::compile_model BEFORE compileWithConfig18" << std::endl;
 
         mainNetworkDescription = initMainNetworkDescriptions.back();
         initMainNetworkDescriptions.pop_back();
@@ -273,7 +271,6 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
         const std::shared_ptr<ov::Model> originalModel = model->clone();
         std::shared_ptr<ov::Model> targetModel = model;
         size_t i = 0;
-        std::cout << "Plugin::compile_model BEFORE compileWithConfig19" << std::endl;
 
         while (auto networkDescription =
                    std::make_shared<NetworkDescription>(_compiler->compileWsIterative(targetModel, localConfig, i++))) {
@@ -302,7 +299,6 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
                        localConfig.get<SEPARATE_WEIGHTS_VERSION>());
         break;
     }
-    std::cout << "Plugin::compile_model BEFORE compileWithConfig20" << std::endl;
 
     if (_logger.level() >= ov::log::Level::INFO) {
         auto compile_model_mem_end = get_peak_memory_usage();
@@ -313,7 +309,6 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
     }
 
     _logger.debug("compile end");
-    std::cout << "Plugin::compile_model BEFORE compileWithConfig21" << std::endl;
 
     return std::make_shared<WeightlessGraph>(
         _zeGraphExt,

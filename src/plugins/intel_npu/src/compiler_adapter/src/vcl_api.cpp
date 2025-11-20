@@ -253,10 +253,9 @@ NetworkDescription VCLCompilerImpl::compile(const std::shared_ptr<const ov::Mode
                                                : true);
 
     std::string buildFlags;
-    const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
 
     _logger.debug("create build flags");
-    buildFlags += driver_compiler_utils::serializeIOInfo(model, useIndices);
+    buildFlags += driver_compiler_utils::serializeIOInfo(model, true);
     buildFlags += " ";
     buildFlags += driver_compiler_utils::serializeConfig(config, compilerVersion);
     _logger.debug("final build flags to compiler: %s", buildFlags.c_str());
@@ -407,10 +406,9 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
                                                : true);
 
     std::string buildFlags;
-    const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
 
     _logger.debug("create build flags");
-    buildFlags += driver_compiler_utils::serializeIOInfo(model, useIndices);
+    buildFlags += driver_compiler_utils::serializeIOInfo(model, true);
     buildFlags += " ";
     buildFlags += driver_compiler_utils::serializeConfig(config, compilerVersion);
     _logger.debug("final build flags to compiler: %s", buildFlags.c_str());
@@ -423,21 +421,18 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
 
     _logger.debug("Using vclAllocatedExecutableCreateWS");
     vcl_allocator_vector_2 allocator;
-    vcl_blob_container blocContainer;
+    vcl_blob_container blobContainer;
 
     THROW_ON_FAIL_FOR_VCL("vclAllocatedExecutableCreateWS",
-                          vclAllocatedExecutableCreateWS(_compilerHandle, exeDesc, &allocator, &blocContainer),
+                          vclAllocatedExecutableCreateWS(_compilerHandle, exeDesc, &allocator, &blobContainer),
                           _logHandle);
 
-    if (blocContainer.blobCount == 0 || blocContainer.blobSize == nullptr || blocContainer.blobBuffer == nullptr) {
+    if (blobContainer.blobCount == 0 || blobContainer.blobSize == nullptr || blobContainer.blobBuffer == nullptr) {
         OPENVINO_THROW("Failed to create VCL executable, blobCount is zero or blob is null");
     }
 
-    // TODO fill the rest. Call "vclAllocatedExecutableCreateWS" and any other remote function required to retrieve the
-    // vector of blobs and use them to construct the vector of "NetworkDescription". The metadata objects can be empty.
-
     std::vector<std::shared_ptr<NetworkDescription>> networkDescrs;
-    for (int i = 0; i < blocContainer.blobCount; i++) {
+    for (int i = 0; i < blobContainer.blobCount; i++) {
         // Use empty metadata as VCL does not support metadata extraction
         NetworkMetadata metadata;
         networkDescrs.emplace_back(
@@ -455,7 +450,7 @@ NetworkDescription VCLCompilerImpl::compileWsIterative(const std::shared_ptr<ov:
         OPENVINO_THROW("config is not FilteredConfig");
     }
     FilteredConfig updatedConfig = *filteredConfig;
-    updatedConfig.update({{ov::intel_npu::ws_compile_call_number.name(), std::to_string(callNumber++)}});
+    updatedConfig.update({{ov::intel_npu::ws_compile_call_number.name(), std::to_string(callNumber)}});
     return compile(model, config);
 }
 

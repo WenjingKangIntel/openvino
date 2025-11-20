@@ -18,6 +18,7 @@
 #include "intel_npu/utils/zero/zero_result.hpp"
 #include "mem_usage.hpp"
 #include "openvino/core/model.hpp"
+#include "openvino/core/rt_info/weightless_caching_attributes.hpp"
 #include "openvino/runtime/make_tensor.hpp"
 #include "openvino/util/file_util.hpp"
 #include "openvino/util/shared_object.hpp"
@@ -66,6 +67,38 @@ bool isInitMetadata(const intel_npu::NetworkMetadata& networkMetadata) {
         return false;
     }
     return networkMetadata.inputs.at(0).isInitInputWeights;
+}
+
+/**
+ * @brief Stores the information within the "WeightlessCacheAttribute" as runtime fields that persist upon
+ * serialization.
+ * @details Constant nodes (weights) may contain as medatadata the "WeightlessCacheAttribute", that is information
+ * regarding the offset of the weights within the binary file, as well as the original size and precision. This
+ * information is required within the "weights separation" flow, therefore this function is here to store it.
+ * @note Not calling this function in the weights separation flow would lead to this information being lost upon
+ * serialization. The "WeightlessCacheAttribute" information that is populated upon de-serialization would represent
+ * metadata corresponding to the serialized stream, not the original weights file. Therefore the compiler would be
+ * misinformed and lookups of weights offsets could fail.
+ *
+ * @param model Both source and target.
+ */
+void storeWeightlessCacheAttribute(const std::shared_ptr<ov::Model>& model) {
+    size_t constantId = 0;
+    for (auto&& node : model->get_ordered_ops()) {
+        if (ov::is_type<ov::op::v0::Constant>(node)) {
+            ov::RTMap& runtimeInfoMap = node->get_rt_info();
+            const auto& weightlessCacheAttrIt =
+                runtimeInfoMap.find(ov::WeightlessCacheAttribute::get_type_info_static());
+
+            const std::string constantIdString = std::to_string(constantId++);
+            if (weightlessCacheAttrIt != runtimeInfoMap.end()) {
+                auto& weightlessCacheAttr = weightlessCacheAttrIt->second.as<ov::WeightlessCacheAttribute>();
+                model->set_rt_info(weightlessCacheAttr.bin_offset, "ws_bin_offset_" + constantIdString);
+                model->set_rt_info(weightlessCacheAttr.original_size, "ws_original_size_" + constantIdString);
+                model->set_rt_info(weightlessCacheAttr.original_dtype, "ws_original_dtype_" + constantIdString);
+            }
+        }
+    }
 }
 
 }  // namespace
@@ -176,7 +209,7 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
     if (_logger.level() >= ov::log::Level::INFO) {
         compile_model_mem_start = get_peak_memory_usage();
     }
-
+    storeWeightlessCacheAttribute(model);
     std::vector<GraphDescriptor> initGraphDescriptors;
     std::vector<ov::Tensor> tensorsInits;
     std::vector<NetworkMetadata> initNetworkMetadata;
@@ -186,11 +219,13 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
     GraphDescriptor mainGraphDesc;
     NetworkMetadata mainNetworkMetadata;
     std::shared_ptr<NetworkDescription> mainNetworkDescription;
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig17" << std::endl;
 
     switch (localConfig.get<SEPARATE_WEIGHTS_VERSION>()) {
     case ov::intel_npu::WSVersion::ONE_SHOT: {
         std::vector<std::shared_ptr<NetworkDescription>> initMainNetworkDescriptions =
             _compiler->compileWsOneShot(model, localConfig);
+        std::cout << "Plugin::compile_model BEFORE compileWithConfig18" << std::endl;
 
         mainNetworkDescription = initMainNetworkDescriptions.back();
         initMainNetworkDescriptions.pop_back();
@@ -238,6 +273,7 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
         const std::shared_ptr<ov::Model> originalModel = model->clone();
         std::shared_ptr<ov::Model> targetModel = model;
         size_t i = 0;
+        std::cout << "Plugin::compile_model BEFORE compileWithConfig19" << std::endl;
 
         while (auto networkDescription =
                    std::make_shared<NetworkDescription>(_compiler->compileWsIterative(targetModel, localConfig, i++))) {
@@ -266,6 +302,7 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
                        localConfig.get<SEPARATE_WEIGHTS_VERSION>());
         break;
     }
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig20" << std::endl;
 
     if (_logger.level() >= ov::log::Level::INFO) {
         auto compile_model_mem_end = get_peak_memory_usage();
@@ -276,6 +313,7 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<o
     }
 
     _logger.debug("compile end");
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig21" << std::endl;
 
     return std::make_shared<WeightlessGraph>(
         _zeGraphExt,

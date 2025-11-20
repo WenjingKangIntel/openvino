@@ -432,14 +432,14 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
     if (blocContainer.blobCount == 0 || blocContainer.blobSize == nullptr || blocContainer.blobBuffer == nullptr) {
         OPENVINO_THROW("Failed to create VCL executable, blobCount is zero or blob is null");
     }
-    // Use empty metadata as VCL does not support metadata extraction
-    NetworkMetadata metadata;
 
     // TODO fill the rest. Call "vclAllocatedExecutableCreateWS" and any other remote function required to retrieve the
     // vector of blobs and use them to construct the vector of "NetworkDescription". The metadata objects can be empty.
 
     std::vector<std::shared_ptr<NetworkDescription>> networkDescrs;
     for (int i = 0; i < blocContainer.blobCount; i++) {
+        // Use empty metadata as VCL does not support metadata extraction
+        NetworkMetadata metadata;
         networkDescrs.emplace_back(
             std::make_shared<NetworkDescription>(std::move(allocator.m_vector[i].second), std::move(metadata)));
     }

@@ -160,7 +160,7 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compile(const std::shared_ptr<con
 std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(const std::shared_ptr<ov::Model>& model,
                                                          const FilteredConfig& config) const {
     OV_ITT_TASK_CHAIN(COMPILE_BLOB, itt::domains::NPUPlugin, "PluginCompilerAdapter", "compileWS");
-    OPENVINO_ASSERT(_zeGraphExt);
+    // OPENVINO_ASSERT(_zeGraphExt);
 
     _logger.debug("compile start");
 

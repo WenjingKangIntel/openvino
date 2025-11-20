@@ -833,12 +833,14 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
         // If the model contains states, it is not supported when handling batching on the plugin
         shouldHandleBatching = model->get_variables().empty();
     }
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig1" << std::endl;
 
     if (shouldHandleBatching) {
         // Process batching
         std::tie(batchedModel, successfullyDebatched) =
             intel_npu::batch_helpers::handlePluginBatching(model, localConfig, updateBatchMode, originalBatch, _logger);
     }
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig2" << std::endl;
 
     // Update stepping w/ information from driver, unless provided by user or we are off-device
     // Ignore, if compilation was requested for platform, different from current
@@ -852,6 +854,8 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
                             "NPU_STEPPING if required.");
         }
     }
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig3" << std::endl;
+
     // Update max_tiles w/ information from driver, unless provided by user or we are off-device
     // Ignore, if compilation was requested for platform, different from current
     if (!localConfig.has<MAX_TILES>() && device != nullptr &&
@@ -864,8 +868,10 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
                             "NPU_MAX_TILES if required.");
         }
     }
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig4" << std::endl;
 
     OV_ITT_TASK_NEXT(PLUGIN_COMPILE_MODEL, "compile");
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig5" << std::endl;
 
     if (localConfig.isAvailable(ov::intel_npu::weightless_blob.name()) && !localConfig.get<CACHE_DIR>().empty()) {
         // If OV caching is enabled, then weights separation is performed only if the user opted for optimizing the
@@ -881,20 +887,26 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
 
         localConfig.update({{ov::intel_npu::weightless_blob.name(), cacheModeOptimizeSize ? "YES" : "NO"}});
     }
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig1" << std::endl;
 
     std::shared_ptr<intel_npu::IGraph> graph;
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig7" << std::endl;
 
     auto compileWithConfig = [&](const auto& modelToCompile, const auto& config) {
         if (!localConfig.get<WEIGHTLESS_BLOB>()) {
+            std::cout << "Plugin::compile_model BEFORE compileWithConfig7-1" << std::endl;
             return compiler->compile(modelToCompile, config);
         } else {
+            std::cout << "Plugin::compile_model BEFORE compileWithConfig7-2" << std::endl;
             check_weightless_cache_attribute_occurrence(model);
             return compiler->compileWS(modelToCompile, config);
         }
     };
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig8" << std::endl;
 
     try {
         _logger.debug("performing compile");
+        std::cout << "Plugin::compile_model BEFORE compileWithConfig9" << std::endl;
 
         // Determine which model to use
         auto modelToCompile = successfullyDebatched ? batchedModel : model->clone();
@@ -906,17 +918,23 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
             std::stringstream strStream;
             strStream << ov::hint::PerformanceMode::THROUGHPUT;
             modifiedConfig.update({{ov::hint::performance_mode.name(), strStream.str()}});
+            std::cout << "Plugin::compile_model BEFORE compileWithConfig10" << std::endl;
 
             graph = compileWithConfig(modelToCompile, modifiedConfig);
         } else {
+            std::cout << "Plugin::compile_model BEFORE compileWithConfig11" << std::endl;
+
             graph = compileWithConfig(modelToCompile, localConfig);  // No copy
         }
+        std::cout << "Plugin::compile_model BEFORE compileWithConfig12" << std::endl;
+
     } catch (const std::exception& ex) {
         OPENVINO_THROW(ex.what());
     } catch (...) {
         _logger.error("Unexpected exception");
         OPENVINO_THROW("NPU plugin: got an unexpected exception from compiler");
     }
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig13" << std::endl;
 
     std::optional<int64_t> batch = std::nullopt;
     if (originalBatch.has_value() && successfullyDebatched) {
@@ -926,9 +944,12 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
             graph->set_batch_size(batch.value());
         }
     }
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig14" << std::endl;
 
     std::shared_ptr<ov::ICompiledModel> compiledModel;
     try {
+        std::cout << "Plugin::compile_model BEFORE compileWithConfig15" << std::endl;
+
         compiledModel = std::make_shared<CompiledModel>(model, shared_from_this(), device, graph, localConfig, batch);
     } catch (const std::exception& ex) {
         OPENVINO_THROW(ex.what());
@@ -938,6 +959,7 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
 
     ++_compiledModelLoadCounter;
     OV_ITT_TASK_SKIP(PLUGIN_COMPILE_MODEL);
+    std::cout << "Plugin::compile_model BEFORE compileWithConfig16" << std::endl;
 
     return compiledModel;
 }

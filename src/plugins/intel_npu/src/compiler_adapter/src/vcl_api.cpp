@@ -421,22 +421,21 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
 
     _logger.debug("Using vclAllocatedExecutableCreateWS");
     vcl_allocator_vector_2 allocator;
-    vcl_blob_container blobContainer;
 
     THROW_ON_FAIL_FOR_VCL("vclAllocatedExecutableCreateWS",
-                          vclAllocatedExecutableCreateWS(_compilerHandle, exeDesc, &allocator, &blobContainer),
+                          vclAllocatedExecutableCreateWS(_compilerHandle, exeDesc, &allocator),
                           _logHandle);
 
-    if (blobContainer.blobCount == 0 || blobContainer.blobSize == nullptr || blobContainer.blobBuffer == nullptr) {
-        OPENVINO_THROW("Failed to create VCL executable, blobCount is zero or blob is null");
+    if (allocator.m_vector.size() == 0) {
+        OPENVINO_THROW("Failed to create VCL executable, blobCount is zero");
     }
 
     std::vector<std::shared_ptr<NetworkDescription>> networkDescrs;
-    for (int i = 0; i < blobContainer.blobCount; i++) {
+    for (uint32_t i = 0; i < allocator.m_vector.size(); i++) {
         // Use empty metadata as VCL does not support metadata extraction
         NetworkMetadata metadata;
         networkDescrs.emplace_back(
-            std::make_shared<NetworkDescription>(std::move(*allocator.m_vector[i].second), std::move(metadata)));
+            std::make_shared<NetworkDescription>(std::move(*allocator.m_vector[i]), std::move(metadata)));
     }
     return networkDescrs;
 }

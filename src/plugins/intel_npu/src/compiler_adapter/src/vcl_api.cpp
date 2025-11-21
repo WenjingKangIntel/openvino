@@ -194,7 +194,7 @@ struct vcl_allocator_vector_2 : vcl_allocator2_t {
         auto newVec = std::make_shared<std::vector<uint8_t>>();
         newVec->resize(size);
         uint8_t* ptr = newVec->data();
-        vecAllocator->m_vector.emplace_back(std::make_pair(ptr, std::move(*newVec)));
+        vecAllocator->m_vector.emplace_back(newVec);
         return ptr;
     }
 
@@ -204,7 +204,7 @@ struct vcl_allocator_vector_2 : vcl_allocator2_t {
         vecAllocator->m_vector.shrink_to_fit();
     }
 
-    std::vector<std::pair<uint8_t*, std::vector<uint8_t>>> m_vector;
+    std::vector<std::shared_ptr<std::vector<uint8_t>>> m_vector;
 };
 
 struct vcl_allocator_malloc {
@@ -254,10 +254,9 @@ NetworkDescription VCLCompilerImpl::compile(const std::shared_ptr<const ov::Mode
                                            updatedConfig.get<SERIALIZATION_WEIGHTS_SIZE_THRESHOLD>());
 
     std::string buildFlags;
-    const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
 
     _logger.debug("create build flags");
-    buildFlags += driver_compiler_utils::serializeIOInfo(model, useIndices);
+    buildFlags += driver_compiler_utils::serializeIOInfo(model, true);
     buildFlags += " ";
     buildFlags += driver_compiler_utils::serializeConfig(config, compilerVersion);
     _logger.debug("final build flags to compiler: %s", buildFlags.c_str());
@@ -408,10 +407,9 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
                                                : true);
 
     std::string buildFlags;
-    const bool useIndices = !((compilerVersion.major < 5) || (compilerVersion.major == 5 && compilerVersion.minor < 9));
 
     _logger.debug("create build flags");
-    buildFlags += driver_compiler_utils::serializeIOInfo(model, useIndices);
+    buildFlags += driver_compiler_utils::serializeIOInfo(model, true);
     buildFlags += " ";
     buildFlags += driver_compiler_utils::serializeConfig(config, compilerVersion);
     _logger.debug("final build flags to compiler: %s", buildFlags.c_str());
@@ -422,27 +420,23 @@ std::vector<std::shared_ptr<NetworkDescription>> VCLCompilerImpl::compileWsOneSh
                                      buildFlags.size()};
     _logger.debug("compiler vcl version: %d.%d", _vclVersion.major, _vclVersion.minor);
 
-    _logger.debug("Using vclAllocatedExecutableCreateWS");
+    _logger.debug("Using vclAllocatedExecutableCreateWSOneShot");
     vcl_allocator_vector_2 allocator;
-    vcl_blob_container blocContainer;
 
-    THROW_ON_FAIL_FOR_VCL("vclAllocatedExecutableCreateWS",
-                          vclAllocatedExecutableCreateWS(_compilerHandle, exeDesc, &allocator, &blocContainer),
+    THROW_ON_FAIL_FOR_VCL("vclAllocatedExecutableCreateWSOneShot",
+                          vclAllocatedExecutableCreateWSOneShot(_compilerHandle, exeDesc, &allocator),
                           _logHandle);
 
-    if (blocContainer.blobCount == 0 || blocContainer.blobSize == nullptr || blocContainer.blobBuffer == nullptr) {
-        OPENVINO_THROW("Failed to create VCL executable, blobCount is zero or blob is null");
+    if (allocator.m_vector.size() == 0) {
+        OPENVINO_THROW("Failed to create VCL executable, blobCount is zero");
     }
 
-    // TODO fill the rest. Call "vclAllocatedExecutableCreateWS" and any other remote function required to retrieve the
-    // vector of blobs and use them to construct the vector of "NetworkDescription". The metadata objects can be empty.
-
     std::vector<std::shared_ptr<NetworkDescription>> networkDescrs;
-    for (int i = 0; i < blocContainer.blobCount; i++) {
+    for (uint32_t i = 0; i < allocator.m_vector.size(); i++) {
         // Use empty metadata as VCL does not support metadata extraction
         NetworkMetadata metadata;
         networkDescrs.emplace_back(
-            std::make_shared<NetworkDescription>(std::move(allocator.m_vector[i].second), std::move(metadata)));
+            std::make_shared<NetworkDescription>(std::move(*allocator.m_vector[i]), std::move(metadata)));
     }
     return networkDescrs;
 }

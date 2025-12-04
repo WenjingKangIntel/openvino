@@ -181,16 +181,22 @@ static inline std::string getLatestVCLLog(vcl_log_handle_t logHandle) {
 
 VCLApi::VCLApi() : _logger("VCLApi", Logger::global().level()) {
     const std::string baseName = "openvino_intel_npu_compiler";
+    _logger.error("In VCLApi constructor 0");
     try {
+        _logger.error("In VCLApi constructor 1");
         auto libpath = ov::util::make_plugin_library_name({}, baseName);
+        _logger.error("In VCLApi constructor 2");
         _logger.debug("Try to load openvino_intel_npu_compiler");
 
 #if defined(OPENVINO_ENABLE_UNICODE_PATH_SUPPORT) && defined(_WIN32)
+        _logger.error("In VCLApi constructor 3");
         this->lib = ov::util::load_shared_object(ov::util::string_to_wstring(libpath).c_str());
 #else
+        _logger.error("In VCLApi constructor 4");
         this->lib = ov::util::load_shared_object(libpath.c_str());
 #endif
     } catch (const std::runtime_error& error) {
+        _logger.error("In VCLApi constructor 5");
         _logger.debug("Failed to load openvino_intel_npu_compiler");
         OPENVINO_THROW(error.what());
     }
@@ -222,6 +228,7 @@ VCLApi::VCLApi() : _logger("VCLApi", Logger::global().level()) {
 }
 
 const std::shared_ptr<VCLApi> VCLApi::getInstance() {
+    _logger.error("In VCLApi getInstance 0");
     static std::shared_ptr<VCLApi> instance = std::make_shared<VCLApi>();
     return instance;
 }

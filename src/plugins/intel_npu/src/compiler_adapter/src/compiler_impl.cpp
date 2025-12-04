@@ -228,7 +228,6 @@ VCLApi::VCLApi() : _logger("VCLApi", Logger::global().level()) {
 }
 
 const std::shared_ptr<VCLApi> VCLApi::getInstance() {
-    _logger.error("In VCLApi getInstance 0");
     static std::shared_ptr<VCLApi> instance = std::make_shared<VCLApi>();
     return instance;
 }

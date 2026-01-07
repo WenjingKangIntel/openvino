@@ -72,7 +72,7 @@ PluginCompilerAdapter::PluginCompilerAdapter(const std::shared_ptr<ZeroInitStruc
       _logger("PluginCompilerAdapter", Logger::global().level()) {
     _logger.debug("initialize PluginCompilerAdapter start");
     _logger.info("Loading PLUGIN compiler");
-    _logger.info("VCL compiler load failed: %s. Trying to load MLIR compiler...", vcl_exception.what());
+    _logger.info("VCL compiler load failed. Trying to load MLIR compiler...");
     std::string baseName = "npu_mlir_compiler";
     auto libPath = ov::util::make_plugin_library_name(ov::util::get_ov_lib_path(), baseName + OV_BUILD_POSTFIX);
     try {

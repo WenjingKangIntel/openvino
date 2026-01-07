@@ -71,32 +71,20 @@ PluginCompilerAdapter::PluginCompilerAdapter(const std::shared_ptr<ZeroInitStruc
     : _zeroInitStruct(zeroInitStruct),
       _logger("PluginCompilerAdapter", Logger::global().level()) {
     _logger.debug("initialize PluginCompilerAdapter start");
-
     _logger.info("Loading PLUGIN compiler");
+    _logger.info("VCL compiler load failed: %s. Trying to load MLIR compiler...", vcl_exception.what());
+    std::string baseName = "npu_mlir_compiler";
+    auto libPath = ov::util::make_plugin_library_name(ov::util::get_ov_lib_path(), baseName + OV_BUILD_POSTFIX);
     try {
-        auto vclCompilerPtr = VCLCompilerImpl::getInstance();
-        auto vclLib = vclCompilerPtr->getLinkedLibrary();
-        _logger.info("PLUGIN VCL compiler is loading");
-        if (vclCompilerPtr && vclLib) {
-            _compiler = ov::SoPtr<intel_npu::ICompiler>(vclCompilerPtr, vclLib);
+        _compiler = load_compiler(libPath);
+        if (!_compiler) {
+            throw std::runtime_error("MLIR compiler load returned nullptr");
         } else {
-            throw std::runtime_error("VCL compiler or library is nullptr");
+            _logger.info("MLIR compiler loaded successfully. PLUGIN compiler will be used.");
         }
-    } catch (const std::exception& vcl_exception) {
-        _logger.info("VCL compiler load failed: %s. Trying to load MLIR compiler...", vcl_exception.what());
-        std::string baseName = "npu_mlir_compiler";
-        auto libPath = ov::util::make_plugin_library_name(ov::util::get_ov_lib_path(), baseName + OV_BUILD_POSTFIX);
-        try {
-            _compiler = load_compiler(libPath);
-            if (!_compiler) {
-                throw std::runtime_error("MLIR compiler load returned nullptr");
-            } else {
-                _logger.info("MLIR compiler loaded successfully. PLUGIN compiler will be used.");
-            }
-        } catch (const std::exception& mlir_exception) {
-            _logger.info("MLIR compiler load failed: %s", mlir_exception.what());
-            throw std::runtime_error("Both VCL and MLIR compiler load failed, aborting.");
-        }
+    } catch (const std::exception& mlir_exception) {
+        _logger.info("MLIR compiler load failed: %s", mlir_exception.what());
+        throw std::runtime_error("Both VCL and MLIR compiler load failed, aborting.");
     }
 
     if (_zeroInitStruct == nullptr) {

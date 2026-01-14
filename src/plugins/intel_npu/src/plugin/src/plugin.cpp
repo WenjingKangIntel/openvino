@@ -338,7 +338,7 @@ void Plugin::init_options() {
     // 1. Project was built with ENABLE_INTEL_NPU_COMPILER
     // 2. Compiler library is present
     // 3. Platform is supported by the compiler
-#ifdef ENABLE_INTEL_NPU_COMPILER
+// #ifdef ENABLE_INTEL_NPU_COMPILER
     try {
         CompilerAdapterFactory compilerAdapterFactory;
         // This is expected to throw in case the compiler library is not available
@@ -362,7 +362,7 @@ void Plugin::init_options() {
     } catch (...) {
         _logger.warning("Failed to set PLUGIN as default compiler type. Compiler library is not available");
     }
-#endif
+// #endif
 
     // parse again env_variables to update registered configs which have env vars set
     _globalConfig.parseEnvVars();
@@ -701,6 +701,7 @@ std::shared_ptr<ov::ICompiledModel> Plugin::compile_model(const std::shared_ptr<
     // create compiler
     CompilerAdapterFactory compilerAdapterFactory;
     auto compiler = compilerAdapterFactory.getCompiler(_backend, resolveCompilerType(_globalConfig, properties));
+    std::cout << "Resolved compiler type: " << resolveCompilerType(_globalConfig, properties) << std::endl;
 
     OV_ITT_TASK_CHAIN(PLUGIN_COMPILE_MODEL, itt::domains::NPUPlugin, "Plugin::compile_model", "fork_local_config");
     auto localConfig = fork_local_config(localPropertiesMap, compiler);

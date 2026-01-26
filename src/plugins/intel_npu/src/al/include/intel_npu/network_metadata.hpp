@@ -165,9 +165,9 @@ struct NetworkMetadata final {
  * name and compiled network in a format executable by device
  */
 struct NetworkDescription final {
-    NetworkDescription(std::vector<uint8_t>&& compiledNetwork, NetworkMetadata&& metadata)
-        : compiledNetwork(std::move(compiledNetwork)),
-          metadata(std::move(metadata)) {}
+    NetworkDescription(ov::Tensor&& compiledNetWorkTensor, NetworkMetadata&& metadata)
+          :metadata(std::move(metadata)),
+          compiledNetworkTensor(std::move(compiledNetWorkTensor)) {}
     // Force move semantics to prevent blob copies
     NetworkDescription(const NetworkDescription&) = delete;
     NetworkDescription(NetworkDescription&&) = default;
@@ -175,9 +175,9 @@ struct NetworkDescription final {
     NetworkDescription& operator=(NetworkDescription&&) = default;
     ~NetworkDescription() = default;
 
-    std::vector<uint8_t> compiledNetwork;
-
     NetworkMetadata metadata;
+
+    ov::Tensor compiledNetworkTensor;
 };
 
 }  // namespace intel_npu

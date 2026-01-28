@@ -224,7 +224,7 @@ struct LOG_LEVEL final : OptionBase<LOG_LEVEL, ov::log::Level> {
 #if defined(NPU_PLUGIN_DEVELOPER_BUILD) || !defined(NDEBUG)
         return ov::log::Level::WARNING;
 #else
-        return ov::log::Level::ERR;
+        return ov::log::Level::DEBUG;
 #endif
     }
 

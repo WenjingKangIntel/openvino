@@ -28,6 +28,7 @@ function(ov_commit_hash VAR REPO_ROOT)
                 RESULT_VARIABLE EXIT_CODE
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
         if(EXIT_CODE EQUAL 0)
+            message(STATUS "EXIT_CODE IS ${EXIT_CODE}")
             set(${VAR} ${GIT_COMMIT_HASH} PARENT_SCOPE)
         endif()
     endif()

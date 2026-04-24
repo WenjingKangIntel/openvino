@@ -19,6 +19,7 @@ function(ov_branch_name VAR REPO_ROOT)
 endfunction()
 
 function(ov_commit_hash VAR REPO_ROOT)
+    message(STATUS "REPO_ROOT IS ${REPO_ROOT}")
     if(GIT_FOUND)
         execute_process(
                 COMMAND ${GIT_EXECUTABLE} rev-parse --short=11 HEAD

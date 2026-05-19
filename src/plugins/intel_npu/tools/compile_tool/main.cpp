@@ -502,8 +502,13 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        std::cout << "Compiling model" << std::endl;
+        std::cout << "Compiling model with CID" << std::endl;
+        configs["NPU_COMPILER_TYPE"] = "DRIVER";
         auto compiledModel = core.compile_model(model, FLAGS_d, {configs.begin(), configs.end()});
+        std::cout << "Compiling model with CIP" << std::endl;
+        configs["NPU_COMPILER_TYPE"] = "PLUGIN";
+        auto compiledModelCip = core.compile_model(model, FLAGS_d, {configs.begin(), configs.end()});
+
         loadNetworkTimeElapsed =
             std::chrono::duration_cast<TimeDiff>(std::chrono::steady_clock::now() - timeBeforeLoadNetwork);
         std::string outputName = FLAGS_o;

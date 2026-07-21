@@ -5,8 +5,11 @@
 #include "compiler_impl.hpp"
 
 #include <algorithm>
+#include <functional>
+#include <iostream>
 #include <limits>
 #include <mutex>
+#include <thread>
 
 #include "intel_npu/config/options.hpp"
 #include "intel_npu/npu_private_properties.hpp"
@@ -38,6 +41,14 @@ UsedVersion getUsedVclVersion(uint16_t pluginMajor, uint16_t pluginMinor, const 
         usedMinor = loadedVersion.minor;
     }
     return {usedMajor, usedMinor};
+}
+
+void log_vcl_compiler_lifecycle_event(const char* phase, const void* instance) {
+    static std::mutex log_mutex;
+    std::lock_guard<std::mutex> lock(log_mutex);
+    std::clog << "[VCLCompilerImpl][lifecycle][tid="
+              << static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
+              << "][this=" << instance << "] " << phase << std::endl;
 }
 
 }  // namespace
@@ -98,6 +109,7 @@ VCLCompilerImpl::VCLCompilerImpl(const std::string& libraryDir,
                                  const std::optional<IDevice::DeviceProperties>& deviceProperties)
     : _logHandle(nullptr),
       _logger("VCLCompilerImpl", Logger::global().level()) {
+        log_vcl_compiler_lifecycle_event("ctor begin", this);
     _logger.debug("VCLCompilerImpl constructor start");
 
     // Load VCL library
@@ -164,9 +176,11 @@ VCLCompilerImpl::VCLCompilerImpl(const std::string& libraryDir,
                  _compilerProperties.version.major,
                  _compilerProperties.version.minor,
                  _compilerProperties.supportedOpsets);
+    log_vcl_compiler_lifecycle_event("ctor end", this);
 }
 
 VCLCompilerImpl::~VCLCompilerImpl() {
+    log_vcl_compiler_lifecycle_event("dtor begin", this);
     if (_compilerHandle) {
         vcl_result_t result = vclCompilerDestroy(_compilerHandle);
         _compilerHandle = nullptr;
@@ -181,6 +195,7 @@ VCLCompilerImpl::~VCLCompilerImpl() {
         _logHandle = nullptr;  // Log handle is released automatically with the compiler
     }
     _logger.info("VCL Compiler destroyed successfully");
+    log_vcl_compiler_lifecycle_event("dtor end", this);
 }
 
 std::shared_ptr<void> VCLCompilerImpl::getLinkedLibrary() const {

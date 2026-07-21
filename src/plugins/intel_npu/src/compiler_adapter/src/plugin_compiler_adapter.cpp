@@ -4,8 +4,10 @@
 
 #include "plugin_compiler_adapter.hpp"
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <thread>
 
 #include "dynamic_graph.hpp"
 #include "graph.hpp"
@@ -31,12 +33,24 @@ PluginCompilerAdapter::PluginCompilerAdapter(const std::shared_ptr<ZeroInitStruc
                                              const std::optional<IDevice::DeviceProperties>& deviceProperties)
     : _zeroInitStruct(zeroInitStruct),
       _logger("PluginCompilerAdapter", Logger::global().level()) {
+    _logger.info("PluginCompilerAdapter ctor begin [this=%p, tid=%zu, hasDeviceProperties=%s]",
+                                 this,
+                                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())),
+                                 deviceProperties.has_value() ? "true" : "false");
     _logger.info("initialize PluginCompilerAdapter start");
 
     _logger.info("Loading PLUGIN compiler");
     try {
         auto ovLibPath = ov::util::path_to_string(ov::util::get_ov_lib_path());
+        _logger.info("Creating VCLCompilerImpl [this=%p, tid=%zu, ovLibPath=%s]",
+                     this,
+                     static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())),
+                     ovLibPath.c_str());
         auto vclCompilerPtr = std::make_shared<VCLCompilerImpl>(ovLibPath, deviceProperties);
+        _logger.info("Created VCLCompilerImpl [this=%p, tid=%zu, compiler=%p]",
+                     this,
+                     static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())),
+                     vclCompilerPtr.get());
         OPENVINO_ASSERT(vclCompilerPtr != nullptr, "VCL compiler is nullptr");
         auto vclLib = vclCompilerPtr->getLinkedLibrary();
         _logger.info("PLUGIN VCL compiler is loading");
@@ -47,6 +61,9 @@ PluginCompilerAdapter::PluginCompilerAdapter(const std::shared_ptr<ZeroInitStruc
     }
 
     if (_zeroInitStruct == nullptr) {
+        _logger.info("PluginCompilerAdapter ctor end (zero init is null) [this=%p, tid=%zu]",
+                     this,
+                     static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
         return;
     }
 
@@ -59,6 +76,18 @@ PluginCompilerAdapter::PluginCompilerAdapter(const std::shared_ptr<ZeroInitStruc
     _logger.info("initialize PluginCompilerAdapter complete, using graphExtVersion: %d.%d",
                  ZE_MAJOR_VERSION(graphExtVersion),
                  ZE_MINOR_VERSION(graphExtVersion));
+    _logger.info("PluginCompilerAdapter ctor end [this=%p, tid=%zu]",
+                 this,
+                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
+}
+
+PluginCompilerAdapter::~PluginCompilerAdapter() noexcept {
+    _logger.info("PluginCompilerAdapter dtor begin [this=%p, tid=%zu]",
+                 this,
+                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
+    _logger.info("PluginCompilerAdapter dtor end [this=%p, tid=%zu]",
+                 this,
+                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
 }
 
 std::shared_ptr<IGraph> PluginCompilerAdapter::compile(const std::shared_ptr<const ov::Model>& model,

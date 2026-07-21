@@ -5,7 +5,10 @@
 #include "plugin.hpp"
 
 #include <fstream>
+#include <iostream>
+#include <mutex>
 #include <numeric>
+#include <thread>
 
 #include "compiled_model.hpp"
 #include "intel_npu/common/compiler_adapter_factory.hpp"
@@ -37,6 +40,14 @@
 
 namespace {
 using namespace intel_npu;
+
+void log_plugin_lifecycle_event(const char* phase, const void* instance) {
+    static std::mutex log_mutex;
+    std::lock_guard<std::mutex> lock(log_mutex);
+    std::clog << "[NPUPlugin][lifecycle][tid="
+              << static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
+              << "][this=" << instance << "] " << phase << std::endl;
+}
 
 const std::vector<size_t> CONSTANT_NODE_DUMMY_SHAPE{1};
 
@@ -330,6 +341,10 @@ namespace intel_npu {
 
 Plugin::Plugin() : _logger("NPUPlugin", Logger::global().level()) {
     OV_ITT_SCOPED_TASK(itt::domains::NPUPlugin, "Plugin::Plugin");
+    log_plugin_lifecycle_event("ctor begin", this);
+    _logger.info("Plugin ctor begin [this=%p, tid=%zu]",
+                 this,
+                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
     set_device_name("NPU");
 
     std::shared_ptr<OptionsDesc> options = std::make_shared<OptionsDesc>();
@@ -360,6 +375,21 @@ Plugin::Plugin() : _logger("NPUPlugin", Logger::global().level()) {
     /// Init and register properties
     OV_ITT_TASK_NEXT(PLUGIN, "RegisterProperties");
     _propertiesManager = std::make_unique<PluginPropertyManager>(config, metrics, _backend, _logger);
+    _logger.info("Plugin ctor end [this=%p, tid=%zu]",
+                 this,
+                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
+    log_plugin_lifecycle_event("ctor end", this);
+}
+
+Plugin::~Plugin() {
+    log_plugin_lifecycle_event("dtor begin", this);
+    _logger.info("Plugin dtor begin [this=%p, tid=%zu]",
+                 this,
+                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
+    _logger.info("Plugin dtor end [this=%p, tid=%zu]",
+                 this,
+                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
+    log_plugin_lifecycle_event("dtor end", this);
 }
 
 void Plugin::set_property(const ov::AnyMap& properties) {

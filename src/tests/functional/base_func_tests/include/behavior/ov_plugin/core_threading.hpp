@@ -4,6 +4,8 @@
 #pragma once
 
 #include <thread>
+#include <iostream>
+#include <mutex>
 
 #include "shared_test_classes/base/ov_behavior_test_utils.hpp"
 #include "common_test_utils/ov_tensor_utils.hpp"
@@ -22,6 +24,12 @@ using Params = std::tuple<Device, Config>;
 
 class CoreThreadingTestsBase {
 public:
+    static void logThreadEvent(const std::string& msg) {
+        static std::mutex logMutex;
+        std::lock_guard<std::mutex> lock(logMutex);
+        std::clog << "[CoreThreading][tid=" << std::this_thread::get_id() << "] " << msg << std::endl;
+    }
+
     static void runParallel(std::function<void(void)> func,
                             const unsigned int iterations = 100,
                             const unsigned int threadsNum = 8) {
@@ -566,9 +574,16 @@ TEST_P(CoreThreadingTestsWithIter, smoke_CompileModel_MultipleCores) {
     runParallel(
         [&]() {
             auto value = counter++;
-            auto core = ov::test::utils::create_core();;
+            auto core = ov::test::utils::create_core();
+            logThreadEvent("iter=" + std::to_string(value) + ": Core created, setting NPU properties");
             core.set_property(target_device, config);
+            logThreadEvent("iter=" + std::to_string(value) + ": Starting compile_model (expected plugin/compiler load point)");
             (void)core.compile_model(models[value % models.size()], target_device);
+            logThreadEvent("iter=" + std::to_string(value) + ": Finished compile_model");
+
+            logThreadEvent("iter=" + std::to_string(value) + ": Calling unload_plugin (expected plugin/compiler unload point)");
+            safePluginUnload(core, target_device);
+            logThreadEvent("iter=" + std::to_string(value) + ": unload_plugin returned");
         },
         numIterations,
         numThreads);

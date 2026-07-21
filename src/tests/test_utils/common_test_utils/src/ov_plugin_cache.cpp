@@ -7,6 +7,9 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <iostream>
+#include <mutex>
+#include <thread>
 #include <unordered_map>
 
 #include "common_test_utils/file_utils.hpp"
@@ -20,6 +23,14 @@ ov::AnyMap global_plugin_config = {};
 std::unordered_set<std::string> available_devices = {};
 std::string target_device = "";
 std::string target_plugin_name = "";
+
+namespace {
+void log_create_core_event(const std::string& msg) {
+    static std::mutex log_mutex;
+    std::lock_guard<std::mutex> lock(log_mutex);
+    std::clog << "[ov_plugin_cache][create_core][tid=" << std::this_thread::get_id() << "] " << msg << std::endl;
+}
+}  // namespace
 
 void register_plugin(ov::Core& ov_core) noexcept {
     if (!target_plugin_name.empty()) {
@@ -40,20 +51,31 @@ void register_template_plugin([[maybe_unused]] ov::Core& ov_core) noexcept {
 }
 
 ov::Core create_core(const std::string& in_target_device) {
+    log_create_core_event("Enter create_core, requested_device='" + in_target_device + "'");
     ov::Core ov_core;
+    log_create_core_event("ov::Core instance created");
 
 #if !defined(OPENVINO_STATIC_LIBRARY) && !defined(USE_STATIC_IE)
+    log_create_core_event("Registering target plugin (if configured)");
     register_plugin(ov_core);
+    log_create_core_event("Target plugin registration step finished");
     // Register Template plugin as a reference provider
+    log_create_core_event("Registering template plugin (if enabled)");
     register_template_plugin(ov_core);
+    log_create_core_event("Template plugin registration step finished");
 #endif  // !OPENVINO_STATIC_LIBRARY && !USE_STATIC_IE
 
     if (available_devices.empty()) {
+        log_create_core_event("available_devices cache is empty, querying core devices");
         const auto core_devices = ov_core.get_available_devices();
         available_devices.insert(core_devices.begin(), core_devices.end());
+        log_create_core_event("available_devices cache populated with " + std::to_string(available_devices.size()) + " entries");
+    } else {
+        log_create_core_event("available_devices cache already populated with " + std::to_string(available_devices.size()) + " entries");
     }
 
     if (!available_devices.count(in_target_device) && !in_target_device.empty()) {
+        log_create_core_event("Requested device is not present in available_devices cache");
 #ifndef NDEBUG
         std::cout << "Available devices :" << std::endl;
         for (const auto& device : available_devices) {
@@ -64,17 +86,24 @@ ov::Core create_core(const std::string& in_target_device) {
     }
 
     if (!global_plugin_config.empty()) {
+        log_create_core_event("Applying global_plugin_config");
         // apply config to main device specified by user at launch or to special device specified when creating new сore
         auto config_device = in_target_device.empty() ? target_device : in_target_device;
         for (auto& property : global_plugin_config) {
             try {
+                log_create_core_event("Setting property '" + property.first + "' on device '" + config_device + "'");
                 ov_core.set_property(config_device, global_plugin_config);
             } catch (...) {
+                log_create_core_event("Setting property failed for key '" + property.first + "'");
                 OPENVINO_THROW("Property " + property.first +
                                ", which was tried to set in --config file, is not supported by " + target_device);
             }
         }
+        log_create_core_event("global_plugin_config applied successfully");
+    } else {
+        log_create_core_event("global_plugin_config is empty, skipping property setup");
     }
+    log_create_core_event("Leave create_core");
     return ov_core;
 }
 

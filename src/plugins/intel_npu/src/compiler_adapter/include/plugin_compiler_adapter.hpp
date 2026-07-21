@@ -22,6 +22,7 @@ class PluginCompilerAdapter final : public ICompilerAdapter {
 public:
     PluginCompilerAdapter(const std::shared_ptr<ZeroInitStructsHolder>& zeroInitStruct,
                           const std::optional<IDevice::DeviceProperties>& deviceProperties = std::nullopt);
+    ~PluginCompilerAdapter() noexcept override;
 
     std::shared_ptr<IGraph> compile(const std::shared_ptr<const ov::Model>& model,
                                     const FilteredConfig& config) const override;

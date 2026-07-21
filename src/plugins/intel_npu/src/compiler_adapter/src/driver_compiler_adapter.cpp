@@ -5,6 +5,9 @@
 #include "driver_compiler_adapter.hpp"
 
 #include <functional>
+#include <iostream>
+#include <mutex>
+#include <thread>
 
 #include "graph.hpp"
 #include "intel_npu/common/filtered_config.hpp"
@@ -19,9 +22,22 @@
 
 namespace intel_npu {
 
+namespace {
+
+void log_driver_compiler_lifecycle_event(const char* phase, const void* instance) {
+        static std::mutex log_mutex;
+        std::lock_guard<std::mutex> lock(log_mutex);
+        std::clog << "[DriverCompilerAdapter][lifecycle][tid="
+                            << static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
+                            << "][this=" << instance << "] " << phase << std::endl;
+}
+
+}  // namespace
+
 DriverCompilerAdapter::DriverCompilerAdapter(const std::shared_ptr<ZeroInitStructsHolder>& zeroInitStruct)
     : _zeroInitStruct(zeroInitStruct),
       _logger("DriverCompilerAdapter", Logger::global().level()) {
+        log_driver_compiler_lifecycle_event("ctor begin", this);
     _logger.info("initialize DriverCompilerAdapter start");
 
     uint32_t graphExtVersion = _zeroInitStruct->getGraphDdiTable().version();
@@ -35,6 +51,12 @@ DriverCompilerAdapter::DriverCompilerAdapter(const std::shared_ptr<ZeroInitStruc
     _logger.info("initialize DriverCompilerAdapter complete, using graphExtVersion: %d.%d",
                  ZE_MAJOR_VERSION(graphExtVersion),
                  ZE_MINOR_VERSION(graphExtVersion));
+    log_driver_compiler_lifecycle_event("ctor end", this);
+}
+
+DriverCompilerAdapter::~DriverCompilerAdapter() noexcept {
+    log_driver_compiler_lifecycle_event("dtor begin", this);
+    log_driver_compiler_lifecycle_event("dtor end", this);
 }
 
 std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<const ov::Model>& model,

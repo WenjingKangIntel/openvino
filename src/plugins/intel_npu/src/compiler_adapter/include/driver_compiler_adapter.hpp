@@ -20,6 +20,7 @@ namespace intel_npu {
 class DriverCompilerAdapter final : public ICompilerAdapter {
 public:
     DriverCompilerAdapter(const std::shared_ptr<ZeroInitStructsHolder>& zeroInitStruct);
+    ~DriverCompilerAdapter() noexcept override;
 
     std::shared_ptr<IGraph> compile(const std::shared_ptr<const ov::Model>& model,
                                     const FilteredConfig& config) const override;

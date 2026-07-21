@@ -5,7 +5,9 @@
 #include "plugin_compiler_adapter.hpp"
 
 #include <functional>
+#include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -29,14 +31,23 @@
 
 namespace intel_npu {
 
+namespace {
+
+void log_plugin_compiler_lifecycle_event(const char* phase, const void* instance) {
+        static std::mutex log_mutex;
+        std::lock_guard<std::mutex> lock(log_mutex);
+        std::clog << "[PluginCompilerAdapter][lifecycle][tid="
+                            << static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()))
+                            << "][this=" << instance << "] " << phase << std::endl;
+}
+
+}  // namespace
+
 PluginCompilerAdapter::PluginCompilerAdapter(const std::shared_ptr<ZeroInitStructsHolder>& zeroInitStruct,
                                              const std::optional<IDevice::DeviceProperties>& deviceProperties)
     : _zeroInitStruct(zeroInitStruct),
       _logger("PluginCompilerAdapter", Logger::global().level()) {
-    _logger.info("PluginCompilerAdapter ctor begin [this=%p, tid=%zu, hasDeviceProperties=%s]",
-                                 this,
-                                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())),
-                                 deviceProperties.has_value() ? "true" : "false");
+        log_plugin_compiler_lifecycle_event("ctor begin", this);
     _logger.info("initialize PluginCompilerAdapter start");
 
     _logger.info("Loading PLUGIN compiler");
@@ -76,18 +87,12 @@ PluginCompilerAdapter::PluginCompilerAdapter(const std::shared_ptr<ZeroInitStruc
     _logger.info("initialize PluginCompilerAdapter complete, using graphExtVersion: %d.%d",
                  ZE_MAJOR_VERSION(graphExtVersion),
                  ZE_MINOR_VERSION(graphExtVersion));
-    _logger.info("PluginCompilerAdapter ctor end [this=%p, tid=%zu]",
-                 this,
-                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
+    log_plugin_compiler_lifecycle_event("ctor end", this);
 }
 
 PluginCompilerAdapter::~PluginCompilerAdapter() noexcept {
-    _logger.info("PluginCompilerAdapter dtor begin [this=%p, tid=%zu]",
-                 this,
-                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
-    _logger.info("PluginCompilerAdapter dtor end [this=%p, tid=%zu]",
-                 this,
-                 static_cast<size_t>(std::hash<std::thread::id>{}(std::this_thread::get_id())));
+    log_plugin_compiler_lifecycle_event("dtor begin", this);
+    log_plugin_compiler_lifecycle_event("dtor end", this);
 }
 
 std::shared_ptr<IGraph> PluginCompilerAdapter::compile(const std::shared_ptr<const ov::Model>& model,

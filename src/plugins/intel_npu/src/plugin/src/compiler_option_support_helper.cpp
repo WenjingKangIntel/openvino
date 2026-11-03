@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <sstream>
 
 #include "intel_npu/common/option_support_cache.hpp"
 
@@ -16,31 +15,13 @@ namespace {
 OptionSupportCache::CacheKey toCacheKey(const ov::intel_npu::CompilerType compilerType) {
     return static_cast<OptionSupportCache::CacheKey>(compilerType);
 }
-
-std::string toString(const ov::intel_npu::CompilerType compilerType) {
-    std::ostringstream stream;
-    stream << compilerType;
-    return stream.str();
-}
-
-std::string joinOptions(const std::vector<std::string>& options) {
-    std::ostringstream stream;
-    for (size_t index = 0; index < options.size(); ++index) {
-        if (index != 0) {
-            stream << " ";
-        }
-        stream << options[index];
-    }
-    return stream.str();
-}
 }  // namespace
 
 CompilerOptionSupportHelper::CompilerOptionSupportHelper(const ov::SoPtr<IEngineBackend>& backend,
                                                          const CompilerAdapterFactory& adapterFactory)
     : _backend(backend),
       _adapterFactory(adapterFactory),
-      _optionSupportCache(std::make_shared<OptionSupportCache>()),
-      _logger("CompilerOptionSupportHelper", Logger::global().level()) {}
+      _optionSupportCache(std::make_shared<OptionSupportCache>()) {}
 
 const std::shared_ptr<OptionSupportCache>& CompilerOptionSupportHelper::getOptionSupportCache() const {
     return _optionSupportCache;
@@ -74,14 +55,8 @@ bool CompilerOptionSupportHelper::isOptionSupported(ov::intel_npu::CompilerType 
         std::lock_guard<std::mutex> lock(_supportedOptionsLoadedMutex);
         optionsLoaded = &_supportedOptionsLoaded[cacheKey];
     }
-    std::call_once(*optionsLoaded, [&]() {
-        const auto supportedOptions = compiler->get_supported_options();
-        if (_logger.level() >= ov::log::Level::INFO) {
-            _logger.info("Compiler %s reports %zu supported options: {%s}",
-                         toString(compilerType).c_str(),
-                         supportedOptions.size(),
-                         joinOptions(supportedOptions).c_str());
-        }
+    std::call_once(*optionsLoaded, [&compiler]() {
+        compiler->get_supported_options();
     });
 
     if (const auto cachedSupport = getCachedSupport(); cachedSupport.has_value()) {

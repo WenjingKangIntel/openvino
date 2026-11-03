@@ -43,6 +43,32 @@ bool isVersionSupportedByCompiler(uint32_t version, const ze_graph_compiler_vers
     return (compilerVersion.major > major) || ((compilerVersion.major == major) && (compilerVersion.minor >= minor));
 }
 
+std::string joinOptions(const std::vector<std::string>& options) {
+    std::ostringstream stream;
+    for (size_t index = 0; index < options.size(); ++index) {
+        if (index != 0) {
+            stream << " ";
+        }
+        stream << options[index];
+    }
+    return stream.str();
+}
+
+/**
+ * @brief Dumps the option list reported by the compiler. Only queries the compiler when the log level makes
+ *        the dump visible, since retrieving the list is a driver round trip.
+ */
+void logSupportedOptions(const Logger& logger, const ICompilerAdapter& adapter) {
+    if (logger.level() < ov::log::Level::INFO) {
+        return;
+    }
+
+    const auto supportedOptions = adapter.get_supported_options();
+    logger.info("Compiler reports %zu supported options: {%s}",
+                supportedOptions.size(),
+                joinOptions(supportedOptions).c_str());
+}
+
 const std::vector<PropertySupportInfo> _supportedPropertiesWithVersions = {
     {ov::compilation_num_threads.name(), ONEAPI_MAKE_VERSION(0, 0)},
     {ov::enable_profiling.name(), ONEAPI_MAKE_VERSION(0, 0)},
@@ -96,6 +122,8 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compile(const std::shared_ptr<con
     const ze_graph_compiler_version_info_t& compilerVersion = _compilerProperties.compilerVersion;
     const auto maxOpsetVersion = _compilerProperties.maxOVOpsetVersionSupported;
     _logger.info("getSupportedOpsetVersion Max supported version of opset in CiD: %d", maxOpsetVersion);
+
+    logSupportedOptions(_logger, *this);
 
     _logger.debug("serialize IR");
 
@@ -164,6 +192,8 @@ std::shared_ptr<IGraph> DriverCompilerAdapter::compileWS(std::shared_ptr<ov::Mod
 
     const auto maxOpsetVersion = _compilerProperties.maxOVOpsetVersionSupported;
     _logger.info("getSupportedOpsetVersion Max supported version of opset in CiD: %d", maxOpsetVersion);
+
+    logSupportedOptions(_logger, *this);
 
     if (config.get<SEPARATE_WEIGHTS_VERSION>() != ov::intel_npu::WSVersion::ITERATIVE) {
         OPENVINO_THROW("Invalid \"SEPARATE_WEIGHTS_VERSION\" value found within the \"compileWS\" call:",

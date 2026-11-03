@@ -5,7 +5,9 @@
 #include "plugin_compiler_adapter.hpp"
 
 #include <memory>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include "dynamic_graph.hpp"
 #include "graph.hpp"
@@ -20,6 +22,36 @@
 #include "weightless_utils.hpp"
 
 namespace intel_npu {
+
+namespace {
+
+std::string joinOptions(const std::vector<std::string>& options) {
+    std::ostringstream stream;
+    for (size_t index = 0; index < options.size(); ++index) {
+        if (index != 0) {
+            stream << " ";
+        }
+        stream << options[index];
+    }
+    return stream.str();
+}
+
+/**
+ * @brief Dumps the option list reported by the compiler. Only queries the compiler when the log level makes
+ *        the dump visible, since retrieving the list is not a free operation.
+ */
+void logSupportedOptions(const Logger& logger, const ICompilerAdapter& adapter) {
+    if (logger.level() < ov::log::Level::INFO) {
+        return;
+    }
+
+    const auto supportedOptions = adapter.get_supported_options();
+    logger.info("Compiler reports %zu supported options: {%s}",
+                supportedOptions.size(),
+                joinOptions(supportedOptions).c_str());
+}
+
+}  // namespace
 
 PluginCompilerAdapter::PluginCompilerAdapter(const std::shared_ptr<ZeroInitStructsHolder>& zeroInitStruct,
                                              const std::shared_ptr<IVCLCompiler>& compiler,
@@ -51,6 +83,8 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compile(const std::shared_ptr<con
                                                        const Config& config,
                                                        const AdapterDescriptor&) const {
     OV_ITT_TASK_CHAIN(COMPILE_BLOB, itt::domains::NPUPlugin, "PluginCompilerAdapter", "compile");
+
+    logSupportedOptions(_logger, *this);
 
     _logger.debug("compile start");
     auto [tensor, compatibilityDescriptor] = _compiler->compile(model, config);
@@ -103,6 +137,8 @@ std::shared_ptr<IGraph> PluginCompilerAdapter::compileWS(std::shared_ptr<ov::Mod
                                                          const AdapterDescriptor&) const {
     OV_ITT_TASK_CHAIN(COMPILE_BLOB, itt::domains::NPUPlugin, "PluginCompilerAdapter", "compileWS");
     _logger.debug("compile start");
+
+    logSupportedOptions(_logger, *this);
 
     Config localConfig = config;
     if (!localConfig.has<SEPARATE_WEIGHTS_VERSION>()) {

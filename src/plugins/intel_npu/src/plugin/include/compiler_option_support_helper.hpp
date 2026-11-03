@@ -14,7 +14,6 @@
 #include "intel_npu/common/compiler_adapter_factory.hpp"
 #include "intel_npu/common/npu.hpp"
 #include "intel_npu/common/option_support_cache.hpp"
-#include "intel_npu/utils/logger/logger.hpp"
 #include "openvino/runtime/intel_npu/properties.hpp"
 
 namespace intel_npu {
@@ -34,7 +33,6 @@ private:
     const ov::SoPtr<IEngineBackend> _backend;
     const CompilerAdapterFactory _adapterFactory;
     std::shared_ptr<OptionSupportCache> _optionSupportCache;
-    Logger _logger;
 
     std::mutex _supportedOptionsLoadedMutex;
     std::unordered_map<OptionSupportCache::CacheKey, std::once_flag> _supportedOptionsLoaded;

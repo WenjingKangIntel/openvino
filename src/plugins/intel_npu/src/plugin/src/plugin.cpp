@@ -535,6 +535,7 @@ std::shared_ptr<ov::ICompiledModel> Plugin::import_model(std::istream& stream, c
     OV_ITT_SCOPED_TASK(itt::domains::NPUPlugin, "Plugin::import_model(std::istream)");
     update_global_properties(properties);
 
+    _logger.info("Plugin::import_model(std::istream) called");
     _logger.debug("Importing a compiled model from the given stream");
 
     if (properties.find(ov::hint::compiled_blob.name()) != properties.end()) {
@@ -564,6 +565,7 @@ std::shared_ptr<ov::ICompiledModel> Plugin::import_model(const ov::Tensor& compi
     OV_ITT_SCOPED_TASK(itt::domains::NPUPlugin, "Plugin::import_model(ov::Tensor)");
     update_global_properties(properties);
 
+    _logger.info("Plugin::import_model(ov::Tensor) called");
     _logger.debug("Importing a compiled model from the given tensor");
 
     // Need to create intermediate istream for NPUW
@@ -589,6 +591,7 @@ std::shared_ptr<ov::ICompiledModel> Plugin::import_model(const ov::Tensor& compi
 
 std::shared_ptr<ov::ICompiledModel> Plugin::import_model(BlobSource& blobSource, ov::AnyMap& properties) const {
     OV_ITT_SCOPED_TASK(itt::domains::NPUPlugin, "Plugin::import_model(BlobSource)");
+    _logger.info("Plugin::import_model(BlobSource) called");
     _logger.trace("Importing a compiled model using a BlobSource object");
 
     OPENVINO_ASSERT(_backend != nullptr, NO_BACKEND_MESSAGE);
